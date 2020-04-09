@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+# default variables
+: "${PORT:=8000}"
+: "${SLEEP:=1}"
+: "${THREADS:=8}"
+: "${TRIES:=60}"
+: "${WORKERS:=4}"
+
+usage() {
+  echo "usage: bin/run web|web-dev"
+  exit 1
+}
+
+wait_for() {
+  tries=0
+  echo "Waiting for $1 to listen on $2..."
+  while true; do
+    [[ $tries -lt $TRIES ]] || return
+    (echo > /dev/tcp/$1/$2) >/dev/null 2>&1
+    result=
+    [[ $? -eq 0 ]] && return
+    sleep $SLEEP
+    tries=$((tries + 1))
+  done
+}
+
+[ $# -lt 1 ] && usage
+
+case $1 in
+  web)
+    . /opt/conda/etc/profile.d/conda.sh && conda activate madserver && gunicorn madserver.web:app --bind 0.0.0.0:${PORT} --worker-class sanic.worker.GunicornWorker  --workers ${WORKERS} --threads ${THREADS} --access-logfile -
+    ;;
+  test)
+    . /opt/conda/etc/profile.d/conda.sh && conda activate madserver && pytest /app
+    ;;
+  web-dev)
+    exec python -m madserver.web
+    ;;
+esac

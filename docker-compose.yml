@@ -1,0 +1,6 @@
+version: '3'
+services:
+  edge_ingestion:
+    ports:
+      - "8000:8000"
+    image: "mozilla/edge-validator:latest"
